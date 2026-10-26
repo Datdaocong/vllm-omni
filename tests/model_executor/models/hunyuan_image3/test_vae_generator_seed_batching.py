@@ -283,6 +283,19 @@ def test_batch_subset_matches_standalone():
         _assert_matches_standalone(observed, expected)
 
 
+@pytest.mark.parametrize("seeds", [torch.tensor([42]), torch.tensor([42, 123, 456])])
+def test_seed_count_must_match_image_count(seeds: torch.Tensor):
+    kwargs = _batch_requests(["A", "B"])
+    kwargs["vae_generator_seed"] = seeds
+
+    model = _TinyHunyuanModel()
+    with pytest.raises(
+        ValueError,
+        match=rf"Number of VAE generator seeds \({seeds.numel()}\) does not match number of VAE images \(2\)",
+    ):
+        model.embed_multimodal(**kwargs)
+
+
 def test_unseeded_requests_run_without_generator():
     [single] = _run(["U"])
     assert single["used_seed"] is None

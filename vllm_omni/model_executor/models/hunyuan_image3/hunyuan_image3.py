@@ -1954,8 +1954,13 @@ class HunyuanImage3ForConditionalGeneration(nn.Module, SupportsMultiModal, Suppo
         vae_generator_seeds = pixel_values.get("vae_generator_seed")
         if vae_generator_seeds is not None:
             vae_generator_seeds = vae_generator_seeds.reshape(-1)
-            if vae_generator_seeds.numel() == 0:
-                vae_generator_seeds = None
+            num_vae_images = len(vae_pixel_values)
+            num_vae_seeds = vae_generator_seeds.numel()
+            if num_vae_seeds != num_vae_images:
+                raise ValueError(
+                    f"Number of VAE generator seeds ({num_vae_seeds}) does not match "
+                    f"number of VAE images ({num_vae_images})."
+                )
 
         # Perform ViT encoding
         vit_embeddings = self._vit_encode(vit_pixel_values, vit_pixel_attention_mask, vit_spatial_shapes)
@@ -1970,7 +1975,7 @@ class HunyuanImage3ForConditionalGeneration(nn.Module, SupportsMultiModal, Suppo
             # across images, so latents depend on batch composition and order.
             vae_generator = None
             if vae_generator_seeds is not None:
-                seed_i = vae_generator_seeds[image_i % vae_generator_seeds.numel()].item()
+                seed_i = vae_generator_seeds[image_i].item()
                 vae_generator = torch.Generator(device=vae_image_i.device).manual_seed(int(seed_i))
             t_i, latents_i = self._vae_encode(vae_image_i.unsqueeze(0), vae_cfg_factor, generator=vae_generator)
             t_emb = self.time_embed(t_i[0])
